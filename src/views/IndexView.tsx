@@ -1,6 +1,6 @@
 import FileHandleIDB from "../db/FileHandleIDB";
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Button, Dropdown, Select, Spinner} from "flowbite-react";
+import {Button, Dropdown, Spinner} from "flowbite-react";
 import Icon from "../components/Icon";
 import dayjs from "dayjs";
 import noop from "../utils/noop";
