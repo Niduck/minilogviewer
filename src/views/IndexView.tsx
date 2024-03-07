@@ -1,6 +1,6 @@
 import FileHandleIDB from "../db/FileHandleIDB";
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Button, Dropdown} from "flowbite-react";
+import {Button, Dropdown, Select, Spinner} from "flowbite-react";
 import Icon from "../components/Icon";
 import dayjs from "dayjs";
 import noop from "../utils/noop";
@@ -10,17 +10,20 @@ import ReadmeModal from "./ReadmeModal";
 
 function IndexView() {
 
-    const levels:Levels = {
+    const levels: Levels = {
         DEBUG: '#696969',
         INFO: '#4169E1',
         WARNING: '#FFA500',
         ERROR: '#d63e48',
         CRITICAL: '#4B0082'
     }
+    const [loading, setLoading] = useState<boolean>(false)
     const [readmeModalOpen, setReadmeModalOpen] = useState<boolean>(false)
     const [fileHandles, setFileHandles] = useState<FileSystemFileHandle[]>([])
     const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
     const [lines, setLines] = useState<Line[]>([])
+    const [filterLevels, setFilterLevels] = useState<string[]>([...Object.keys(levels)])
+    const [nbLines, setNbLines] = useState<number>(90)
     const [watch, setWatch] = useState<boolean>(false)
     const [watchInterval, setWatchInterval] = useState<NodeJS.Timeout | null>(null)
     const dropZone = useRef<HTMLDivElement>(null)
@@ -49,7 +52,7 @@ function IndexView() {
         }
     }
 
-     async function createFileHandle(_fileHandle?: FileSystemFileHandle):Promise<void> {
+    async function createFileHandle(_fileHandle?: FileSystemFileHandle): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-ignore
         const localFileHandle = _fileHandle || (await window.showOpenFilePicker())[0];
@@ -62,18 +65,24 @@ function IndexView() {
         const file = await fileHandle.getFile();
         setFileHandle(fileHandle)
         const linesFound = []
-        const linesToRead = 30
+        setLoading(true)
+        // const linesToRead = nbLines
         console.log("Chargement du fichier...")
         const text = await file.text();
         console.log("Récupération des 30 dernières lignes...")
         const lines = text.split('\n');
         const regexp = new RegExp('^\\[(?<date>[^\\]]+)\\] (?<message>.+)', '')
-        for (let i = lines.length - 1; i >= (lines.length - 1 - linesToRead); i--) {
+
+        let index = 0;
+        const fileLength = lines.length - 1
+        while (linesFound.length < nbLines && fileLength > index) {
+            const i = fileLength - index
             if (!lines[i]) {
+                index++
                 continue;
             }
             const parsedLine = regexp.exec(lines[i].toString().trim())
-            const line:Line = {
+            const line: Line = {
                 level: 'DEBUG',
                 raw: lines[i],
                 date: parsedLine?.groups?.date,
@@ -84,9 +93,35 @@ function IndexView() {
                     line.level = level as keyof Levels;
                 }
             }
-            linesFound.push(line);
+            //No filter or filter is matching
+            if (filterLevels.length === 0 || filterLevels.includes(line.level)) {
+                linesFound.push(line);
+            }
+            index++
         }
+        // for (let i = lines.length - 1; i >= (lines.length - 1 - linesToRead); i--) {
+        //     if (!lines[i]) {
+        //         continue;
+        //     }
+        //     const parsedLine = regexp.exec(lines[i].toString().trim())
+        //     const line:Line = {
+        //         level: 'DEBUG',
+        //         raw: lines[i],
+        //         date: parsedLine?.groups?.date,
+        //         message: parsedLine?.groups?.message
+        //     }
+        //     for (const level of Object.keys(levels)) {
+        //         if (lines[i].includes(level)) {
+        //             line.level = level as keyof Levels;
+        //         }
+        //     }
+        //     //No filter or filter is matching
+        //     if(filterLevels.length === 0 || filterLevels.includes(line.level)){
+        //         linesFound.push(line);
+        //     }
+        // }
         setLines(linesFound)
+        setLoading(false)
     }
 
     async function watchHandle() {
@@ -132,6 +167,19 @@ function IndexView() {
             dropZone.current.classList.remove('opacity-30')
         }
     }, []);
+
+    function toggleFilterLevel(level: string) {
+        if (filterLevels.includes(level)) {
+            filterLevels.splice(filterLevels.indexOf(level), 1)
+        } else {
+            filterLevels.push(level)
+        }
+        setFilterLevels([...filterLevels])
+        if (fileHandle) {
+            void readFile(fileHandle)
+        }
+    }
+
     return (
         <>
             <div className={"fixed bottom-5 opacity-70 hover:opacity-100 text-sm right-5"}>
@@ -149,7 +197,7 @@ function IndexView() {
                 </div>
                 <div className="w-1/3 text-xs gap-3 items-center justify-end flex">
                     <Dropdown size={"xs"} label="Open a log file" dismissOnClick={false}>
-                        <Dropdown.Item onClick={()=>{
+                        <Dropdown.Item onClick={() => {
                             void createFileHandle()
                         }}>Open a new log file</Dropdown.Item>
                         <Dropdown.Divider/>
@@ -170,7 +218,9 @@ function IndexView() {
                         Drop your file here
                     </div>
                     <div className={"border-l px-3 border-cyan-100"}>
-                        <Button onClick={()=>{setReadmeModalOpen(true)}} color={"light"} size={"xs"}>
+                        <Button onClick={() => {
+                            setReadmeModalOpen(true)
+                        }} color={"light"} size={"xs"}>
                             Read.me
                         </Button>
                     </div>
@@ -186,7 +236,43 @@ function IndexView() {
                             <div className="font-medium ">
                                 {fileHandle?.name}
                             </div>
+
+
                         </div>
+                        <Dropdown size={"xs"} label={`${nbLines} lines`} dismissOnClick={false}>
+                            <Dropdown.Item onClick={() => {
+                                setNbLines(30)
+                            }}>30 lines</Dropdown.Item>
+                            <Dropdown.Item onClick={() => {
+                                setNbLines(60)
+                            }}>60 lines</Dropdown.Item>
+                            <Dropdown.Item onClick={() => {
+                                setNbLines(90)
+                            }}>90 lines</Dropdown.Item>
+                            <Dropdown.Item onClick={() => {
+                                setNbLines(120)
+                            }}>120 lines</Dropdown.Item>
+                            <Dropdown.Item onClick={() => {
+                                setNbLines(150)
+                            }}>150 lines</Dropdown.Item>
+                        </Dropdown>
+                        <Dropdown color={"light"} size={"xs"} label={filterLevels ? filterLevels.join(', ') : 'All'}
+                                  dismissOnClick={false}>
+                            {Object.entries(levels).map(([key, value]) => (
+                                <Dropdown.Item onClick={() => {
+                                    toggleFilterLevel(key)
+                                }}>
+                                    <div
+                                        className={`flex gap-3 items-center ${filterLevels.includes(key) ? 'grayscale-0' : 'grayscale opacity-50'}`}>
+                                        <div className="h-2 w-2 rounded-full"
+                                             style={{background: value}}></div>
+                                        {key}
+                                    </div>
+                                </Dropdown.Item>
+                            ))}
+
+
+                        </Dropdown>
                         <Button color={'light'} size={"xs"} onClick={watchHandle}>
                             {watch ? (<>
                                     <Icon name={"eyeoff"} size={16}></Icon>&nbsp;
@@ -203,7 +289,10 @@ function IndexView() {
                 <section className={"w-3/4 mx-auto grow p-3 overflow-y-auto"}>
                     <div className="flex flex-col gap-3">
 
-                        {lines.map((line, index) => (
+                        {loading ? (<div className={"flex items-center justify-center  p-3 text-xl gap-1.5 w-full"}>
+                            <Spinner aria-label="Spinner button example" size="lg"/>
+                            <span className="pl-3 tracking-wide font-light">Parsing file...</span>
+                        </div>) : lines.map((line, index) => (
                             <div key={index}
                                  className={"bg-white p-3 rounded-md font-medium shadow-xs border border-cyan-100"}>
                                 <div className="flex flex-col  gap-3">
@@ -215,20 +304,19 @@ function IndexView() {
                                                 {line.date ? dayjs(line.date).format('MMMM DD YYYY HH:mm') : '-'}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col" style={{color: levels[line.level]}}>
+                                        <div className="flex flex-col break-all" style={{color: levels[line.level]}}>
                                             {line.message ? line.message : line.raw}
                                         </div>
                                     </div>
-
-                                    {/*<div className="text-xs opacity-30 text-center hover:opacity-100">{line.raw}</div>*/}
-
                                 </div>
                             </div>
                         ))}
                     </div>
                 </section>
             </main>
-            <ReadmeModal isOpen={readmeModalOpen} onClose={()=>{setReadmeModalOpen(false)}}></ReadmeModal>
+            <ReadmeModal isOpen={readmeModalOpen} onClose={() => {
+                setReadmeModalOpen(false)
+            }}></ReadmeModal>
         </>
     )
 }
