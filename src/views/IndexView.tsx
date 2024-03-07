@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import noop from "../utils/noop";
 import {Levels} from "../interfaces/Levels";
 import {Line} from "../interfaces/Line";
+import ReadmeModal from "./ReadmeModal";
 
 function IndexView() {
 
@@ -16,6 +17,7 @@ function IndexView() {
         ERROR: '#d63e48',
         CRITICAL: '#4B0082'
     }
+    const [readmeModalOpen, setReadmeModalOpen] = useState<boolean>(false)
     const [fileHandles, setFileHandles] = useState<FileSystemFileHandle[]>([])
     const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
     const [lines, setLines] = useState<Line[]>([])
@@ -132,6 +134,9 @@ function IndexView() {
     }, []);
     return (
         <>
+            <div className={"fixed bottom-5 opacity-70 hover:opacity-100 text-sm right-5"}>
+
+            </div>
             <header
                 className="flex px-6  justify-center bg-white  w-full border-b border-gray-100 text-2xl tracking-wide font-light items-center">
                 <div className="w-1/3">
@@ -163,6 +168,11 @@ function IndexView() {
                         onDragOver={onDragOver}
                     >
                         Drop your file here
+                    </div>
+                    <div className={"border-l px-3 border-cyan-100"}>
+                        <Button onClick={()=>{setReadmeModalOpen(true)}} color={"light"} size={"xs"}>
+                            Read.me
+                        </Button>
                     </div>
 
                 </div>
@@ -218,6 +228,7 @@ function IndexView() {
                     </div>
                 </section>
             </main>
+            <ReadmeModal isOpen={readmeModalOpen} onClose={()=>{setReadmeModalOpen(false)}}></ReadmeModal>
         </>
     )
 }
