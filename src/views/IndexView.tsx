@@ -1,6 +1,6 @@
 import FileHandleIDB from "../db/FileHandleIDB";
-import {useCallback, useEffect, useRef, useState} from "react";
-import {Button, Dropdown, Spinner} from "flowbite-react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {Button, Dropdown, Spinner, TextInput} from "flowbite-react";
 import Icon from "../components/Icon";
 import dayjs from "dayjs";
 import noop from "../utils/noop";
@@ -9,11 +9,21 @@ import {Line} from "../interfaces/Line";
 import ReadmeModal from "./ReadmeModal";
 import {FileHandleDecorator} from "../interfaces/FileHandleStorage";
 
+function debounce(func: (...args: never[]) => void, delay: number) {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    return (...args: never[]) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func(...args), delay);
+    };
+}
+
 function IndexView() {
 
-    const formats:Formats = {
-        "RAW" : null,
-        "MONOLOG" : '^\\[(?<date>[^\\]]+)\\] (?<message>.+)'
+    //? Static
+    const formats: Formats = {
+        "RAW": null,
+        "MONOLOG": '^\\[(?<date>[^\\]]+)\\] (?<message>.+)'
     }
     const levels: Levels = {
         DEBUG: '#696969',
@@ -22,19 +32,52 @@ function IndexView() {
         ERROR: '#d63e48',
         CRITICAL: '#4B0082'
     }
+
+    //? States
     const [loading, setLoading] = useState<boolean>(false)
     const [readmeModalOpen, setReadmeModalOpen] = useState<boolean>(false)
     const [fileHandles, setFileHandles] = useState<FileHandleDecorator[]>([])
     const [fileHandle, setFileHandle] = useState<FileHandleDecorator | null>(null)
     const [lines, setLines] = useState<Line[]>([])
+    const [filterTerms, setFilterTerms] = useState<string>('')
     const [filterLevels, setFilterLevels] = useState<string[]>([...Object.keys(levels)])
     const [filterFormat, setFilterFormat] = useState<string>("RAW")
     const [nbLines, setNbLines] = useState<number>(90)
     const [watch, setWatch] = useState<boolean>(false)
     const [watchInterval, setWatchInterval] = useState<NodeJS.Timeout | null>(null)
     const dropZone = useRef<HTMLDivElement>(null)
+
+    //? Hooks : Memo
+    const delayedSetFilterTerms = useMemo(() => {
+        return debounce((value: string) => {
+            console.log('debounced', value)
+            setFilterTerms(value);
+        }, 300);
+    }, [])
     // const [watchLastModified, setWatchLastModified] = useState<number|null>(null)
     let watchLastModified: null | number = null;
+    const formattedLines = useMemo(()=>{
+            let formatRegexp: null|RegExp = null;
+            if (Object.prototype.hasOwnProperty.call(formats, filterFormat)) {
+                const format = formats[filterFormat];
+                if (format) {
+                    formatRegexp = new RegExp(format, '')
+                }
+            }
+            return lines.map(line => {
+                //Usefull to return to a RAW state
+                line.date = line.message = undefined
+                const parsedLine = formatRegexp ? formatRegexp.exec(line.raw) : null
+                if(formatRegexp){
+                    line.date = parsedLine?.groups?.date
+                    line.message = parsedLine?.groups?.message
+                }
+                return line;
+            })
+
+    }, [filterFormat, lines])
+
+    //? Hooks : Effects
     useEffect(() => {
         (async () => {
             const fileHandleIDB = await FileHandleIDB;
@@ -43,94 +86,6 @@ function IndexView() {
         })()
 
     }, [])
-
-
-
-    async function createFileHandle(_fileHandle?: FileSystemFileHandle): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        const localFileHandle = _fileHandle || (await window.showOpenFilePicker())[0];
-        const fileHandleIDB = await FileHandleIDB;
-        const _key = `fileHandle-${Date.now()}`
-        const fileHandleDecorator = {key : _key, fileHandle: localFileHandle} as FileHandleDecorator
-        fileHandleIDB.update(_key, fileHandleDecorator);
-        fileHandles.push(fileHandleDecorator)
-        void readFile(fileHandleDecorator)
-    }
-
-    async function removeHandle(_fileHandle:FileHandleDecorator){
-        const fileHandleIDB = await FileHandleIDB;
-        fileHandleIDB.delete(_fileHandle.key);
-        setFileHandles(prevState => prevState.filter(fh => fh.key !== _fileHandle.key));
-        if(fileHandle && fileHandle.key === _fileHandle.key){
-            //clear current file
-            setFileHandle(null)
-            setLines([])
-        }
-    }
-
-    async function readFile(_fileHandle: FileHandleDecorator) {
-        console.log(_fileHandle)
-        const file = await _fileHandle.fileHandle.getFile();
-        setFileHandle(_fileHandle)
-        const linesFound = []
-        setLoading(true)
-        const text = await file.text();
-        const lines = text.split('\n');
-        let formatRegexp = null;
-        if(Object.prototype.hasOwnProperty.call(formats, filterFormat)){
-            const format = formats[filterFormat];
-            if(format){
-                formatRegexp = new RegExp(format, '')
-            }
-        }
-        let index = 0;
-        const fileLength = lines.length - 1
-        while (linesFound.length < nbLines && fileLength > index) {
-            const i = fileLength - index
-            if (!lines[i]) {
-                index++
-                continue;
-            }
-            const parsedLine = formatRegexp ? formatRegexp.exec(lines[i].toString().trim()) : null
-            const line: Line = {
-                level: 'DEBUG',
-                raw: lines[i],
-                date: parsedLine ? parsedLine?.groups?.date : undefined,
-                message: parsedLine ? parsedLine?.groups?.message : undefined
-            }
-            for (const level of Object.keys(levels)) {
-                if (lines[i].includes(level)) {
-                    line.level = level as keyof Levels;
-                }
-            }
-            //No filter or filter is matching
-            if (filterLevels.length === 0 || filterLevels.includes(line.level)) {
-                linesFound.push(line);
-            }
-            index++
-        }
-        setLines(linesFound)
-        setLoading(false)
-    }
-
-    async function reloadHandle(_fileHandle: FileHandleDecorator) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        await _fileHandle?.fileHandle.requestPermission({mode: 'read'})
-        const file = await _fileHandle.fileHandle.getFile();
-        if (!watchLastModified || file.lastModified > watchLastModified) {
-            // setWatchLastModified(file.lastModified)
-            watchLastModified = file.lastModified
-            void readFile(_fileHandle)
-        } else {
-            console.log("No reload.")
-        }
-    }
-
-    async function watchHandle() {
-        setWatch(prevState => !prevState)
-    }
 
     useEffect(() => {
         if (!fileHandle) {
@@ -151,6 +106,13 @@ function IndexView() {
         }
     }, [watch])
 
+    useEffect(() => {
+        if (fileHandle) {
+            void readFile(fileHandle)
+        }
+    }, [filterLevels, filterTerms])
+
+    //? Hooks : Callbacks
     const onDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
         if (dropZone.current) {
@@ -164,7 +126,6 @@ function IndexView() {
             void createFileHandle(_fileHandle);
         }
     }, []);
-
     const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
         if (dropZone.current) {
@@ -172,6 +133,110 @@ function IndexView() {
         }
     }, []);
 
+    //? Functions
+    async function createFileHandle(_fileHandle?: FileSystemFileHandle): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-ignore
+        const localFileHandle = _fileHandle || (await window.showOpenFilePicker())[0];
+        const fileHandleIDB = await FileHandleIDB;
+        const _key = `fileHandle-${Date.now()}`
+        const fileHandleDecorator = {key: _key, fileHandle: localFileHandle} as FileHandleDecorator
+        fileHandleIDB.update(_key, fileHandleDecorator);
+        fileHandles.push(fileHandleDecorator)
+        void readFile(fileHandleDecorator)
+    }
+    async function removeHandle(_fileHandle: FileHandleDecorator) {
+        const fileHandleIDB = await FileHandleIDB;
+        fileHandleIDB.delete(_fileHandle.key);
+        setFileHandles(prevState => prevState.filter(fh => fh.key !== _fileHandle.key));
+        if (fileHandle && fileHandle.key === _fileHandle.key) {
+            //clear current file
+            setFileHandle(null)
+            setLines([])
+        }
+    }
+    async function readFile(_fileHandle: FileHandleDecorator) {
+        console.log(_fileHandle)
+        const file = await _fileHandle.fileHandle.getFile();
+        setFileHandle(_fileHandle)
+        const linesFound = []
+        setLoading(true)
+        const text = await file.text();
+        const lines = text.split('\n');
+
+        let index = 0;
+        const fileLength = lines.length - 1
+
+        //? Filter terms
+        const _filterTerms = filterTerms.split(',');
+        while (linesFound.length < nbLines && fileLength > index) {
+            const i = fileLength - index
+            if (!lines[i]) {
+                index++
+                continue;
+            }
+            // const parsedLine = formatRegexp ? formatRegexp.exec(lines[i].toString().trim()) : null
+            const line: Line = {
+                level: 'DEBUG',
+                raw: lines[i],
+                // date: parsedLine ? parsedLine?.groups?.date : undefined,
+                // message: parsedLine ? parsedLine?.groups?.message : undefined
+            }
+
+            // * Parsing : find line LEVEL
+            for (const level of Object.keys(levels)) {
+                if (lines[i].includes(level)) {
+                    line.level = level as keyof Levels;
+                }
+            }
+
+            let selectableLine = true;
+            //?Filter levels : No filter or filter is matching
+            if (filterLevels.length !== 0 && !filterLevels.includes(line.level)) {
+                selectableLine = false
+            }
+            //?Filter terms : No filter or filter is matching
+            for (let term of _filterTerms) {
+                const excluding = term.startsWith('!')
+                if (excluding) {
+                    term = term.substring(1)
+                }
+                if (term !== '') {
+
+                    if (!excluding && !line.raw.includes(term)) {
+                        selectableLine = false
+                    }
+                    if (excluding && line.raw.includes(term)) {
+                        selectableLine = false
+                    }
+                }
+            }
+
+            if (selectableLine) {
+                linesFound.push(line)
+            }
+            index++
+        }
+
+        setLines(linesFound)
+        setLoading(false)
+    }
+    async function reloadHandle(_fileHandle: FileHandleDecorator) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-ignore
+        await _fileHandle?.fileHandle.requestPermission({mode: 'read'})
+        const file = await _fileHandle.fileHandle.getFile();
+        if (!watchLastModified || file.lastModified > watchLastModified) {
+            // setWatchLastModified(file.lastModified)
+            watchLastModified = file.lastModified
+            void readFile(_fileHandle)
+        } else {
+            console.log("No reload.")
+        }
+    }
+    async function watchHandle() {
+        setWatch(prevState => !prevState)
+    }
     function toggleFilterLevel(level: string) {
         if (filterLevels.includes(level)) {
             filterLevels.splice(filterLevels.indexOf(level), 1)
@@ -182,14 +247,7 @@ function IndexView() {
 
     }
 
-    useEffect(()=>{
-        if (fileHandle) {
-            void readFile(fileHandle)
-        }
-    },[filterLevels, filterFormat])
-
-
-
+    //? Template
     return (
         <>
             <div className={"fixed bottom-5 opacity-70 hover:opacity-100 text-sm right-5"}>
@@ -217,10 +275,12 @@ function IndexView() {
                                 <div className="flex items-stretch h-full w-full gap-1.5">
                                     <div onClick={() => {
                                         void reloadHandle(fileHandle)
-                                    }}  className="grow hover:font-medium flex items-center justify-start  ">
+                                    }} className="grow hover:font-medium flex items-center justify-start  ">
                                         {fileHandle.fileHandle.name}
                                     </div>
-                                    <Button onClick={()=>{removeHandle(fileHandle)}} size={"xs"} color={"light"}>
+                                    <Button onClick={() => {
+                                        removeHandle(fileHandle)
+                                    }} size={"xs"} color={"light"}>
                                         <Icon name={"trash"} size={16}/>
                                     </Button>
 
@@ -257,7 +317,19 @@ function IndexView() {
                                 {fileHandle.fileHandle?.name}
                             </div>
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex grow  text-xs gap-3">
+                            <div className="flex grow items-center font-medium  rounded-md  gap-1.5">
+                                <div className="shrink-0">
+                                    Terms :
+                                </div>
+                                <div className="grow">
+                                    <TextInput sizing={"sm"} placeholder="Filter terms : include,!exclude"
+                                               onChange={(e:React.ChangeEvent<HTMLInputElement>) => {
+                                                   const value = e.target.value;
+                                                   delayedSetFilterTerms(value as never)
+                                               }}/>
+                                </div>
+                            </div>
                             <div className="flex items-center font-medium  rounded-md  gap-1.5">
                                 Nb lines :
                                 <Dropdown color={"light"} size={"xs"} label={`${nbLines} lines`} dismissOnClick={false}>
@@ -281,7 +353,8 @@ function IndexView() {
 
                             <div className="flex items-center font-medium rounded-md  gap-1.5">
                                 Levels :
-                                <Dropdown color={"light"} size={"xs"} label={filterLevels ? filterLevels.join(', ') : 'All'}
+                                <Dropdown color={"light"} size={"xs"}
+                                          label={filterLevels ? filterLevels.join(', ') : 'All'}
                                           dismissOnClick={false}>
                                     {Object.entries(levels).map(([key, value]) => (
                                         <Dropdown.Item onClick={() => {
@@ -314,7 +387,7 @@ function IndexView() {
                                     ))}
                                 </Dropdown>
                             </div>
-                            <Button  size={"xs"} onClick={watchHandle}>
+                            <Button size={"xs"} onClick={watchHandle}>
                                 {watch ? (<>
                                         <Icon name={"eyeoff"} size={16}></Icon>&nbsp;
                                         Unwatch file
@@ -334,7 +407,7 @@ function IndexView() {
                         {loading ? (<div className={"flex items-center justify-center  p-3 text-xl gap-1.5 w-full"}>
                             <Spinner aria-label="Spinner button example" size="lg"/>
                             <span className="pl-3 tracking-wide font-light">Parsing file...</span>
-                        </div>) : lines.map((line, index) => (
+                        </div>) : formattedLines.map((line, index) => (
                             <div key={index}
                                  className={"bg-white p-3 rounded-md font-medium shadow-xs border border-cyan-100"}>
                                 <div className="flex flex-col  gap-3">
