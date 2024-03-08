@@ -7,6 +7,7 @@ import noop from "../utils/noop";
 import {Levels} from "../interfaces/Levels";
 import {Line} from "../interfaces/Line";
 import ReadmeModal from "./ReadmeModal";
+import {FileHandleDecorator, FileHandleStorage} from "../interfaces/FileHandleStorage";
 
 function IndexView() {
 
@@ -19,8 +20,8 @@ function IndexView() {
     }
     const [loading, setLoading] = useState<boolean>(false)
     const [readmeModalOpen, setReadmeModalOpen] = useState<boolean>(false)
-    const [fileHandles, setFileHandles] = useState<FileSystemFileHandle[]>([])
-    const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
+    const [fileHandles, setFileHandles] = useState<FileHandleDecorator[]>([])
+    const [fileHandle, setFileHandle] = useState<FileHandleDecorator | null>(null)
     const [lines, setLines] = useState<Line[]>([])
     const [filterLevels, setFilterLevels] = useState<string[]>([...Object.keys(levels)])
     const [nbLines, setNbLines] = useState<number>(90)
@@ -38,41 +39,40 @@ function IndexView() {
 
     }, [])
 
-    async function reloadHandle(fileHandle: FileSystemFileHandle) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        await fileHandle.requestPermission({mode: 'read'})
-        const file = await fileHandle.getFile();
-        if (!watchLastModified || file.lastModified > watchLastModified) {
-            // setWatchLastModified(file.lastModified)
-            watchLastModified = file.lastModified
-            void readFile(fileHandle)
-        } else {
-            console.log("No reload.")
-        }
-    }
+
 
     async function createFileHandle(_fileHandle?: FileSystemFileHandle): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-ignore
         const localFileHandle = _fileHandle || (await window.showOpenFilePicker())[0];
         const fileHandleIDB = await FileHandleIDB;
-        fileHandleIDB.update(`fileHandle-${Date.now()}`, localFileHandle);
-        void readFile(localFileHandle)
+        const _key = `fileHandle-${Date.now()}`
+        const fileHandleDecorator = {key : _key, fileHandle: localFileHandle} as FileHandleDecorator
+        fileHandleIDB.update(_key, fileHandleDecorator);
+        fileHandles.push(fileHandleDecorator)
+        void readFile(fileHandleDecorator)
     }
 
-    async function readFile(fileHandle: FileSystemFileHandle) {
-        const file = await fileHandle.getFile();
-        setFileHandle(fileHandle)
+    async function removeHandle(_fileHandle:FileHandleDecorator){
+        const fileHandleIDB = await FileHandleIDB;
+        fileHandleIDB.delete(_fileHandle.key);
+        setFileHandles(prevState => prevState.filter(fh => fh.key !== _fileHandle.key));
+        if(fileHandle && fileHandle.key === _fileHandle.key){
+            //clear current file
+            setFileHandle(null)
+            setLines([])
+        }
+    }
+
+    async function readFile(_fileHandle: FileHandleDecorator) {
+        console.log(_fileHandle)
+        const file = await _fileHandle.fileHandle.getFile();
+        setFileHandle(_fileHandle)
         const linesFound = []
         setLoading(true)
-        // const linesToRead = nbLines
-        console.log("Chargement du fichier...")
         const text = await file.text();
-        console.log("Récupération des 30 dernières lignes...")
         const lines = text.split('\n');
         const regexp = new RegExp('^\\[(?<date>[^\\]]+)\\] (?<message>.+)', '')
-
         let index = 0;
         const fileLength = lines.length - 1
         while (linesFound.length < nbLines && fileLength > index) {
@@ -99,29 +99,22 @@ function IndexView() {
             }
             index++
         }
-        // for (let i = lines.length - 1; i >= (lines.length - 1 - linesToRead); i--) {
-        //     if (!lines[i]) {
-        //         continue;
-        //     }
-        //     const parsedLine = regexp.exec(lines[i].toString().trim())
-        //     const line:Line = {
-        //         level: 'DEBUG',
-        //         raw: lines[i],
-        //         date: parsedLine?.groups?.date,
-        //         message: parsedLine?.groups?.message
-        //     }
-        //     for (const level of Object.keys(levels)) {
-        //         if (lines[i].includes(level)) {
-        //             line.level = level as keyof Levels;
-        //         }
-        //     }
-        //     //No filter or filter is matching
-        //     if(filterLevels.length === 0 || filterLevels.includes(line.level)){
-        //         linesFound.push(line);
-        //     }
-        // }
         setLines(linesFound)
         setLoading(false)
+    }
+
+    async function reloadHandle(_fileHandle: FileHandleDecorator) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-ignore
+        await _fileHandle?.fileHandle.requestPermission({mode: 'read'})
+        const file = await _fileHandle.fileHandle.getFile();
+        if (!watchLastModified || file.lastModified > watchLastModified) {
+            // setWatchLastModified(file.lastModified)
+            watchLastModified = file.lastModified
+            void readFile(_fileHandle)
+        } else {
+            console.log("No reload.")
+        }
     }
 
     async function watchHandle() {
@@ -180,6 +173,8 @@ function IndexView() {
         }
     }
 
+
+
     return (
         <>
             <div className={"fixed bottom-5 opacity-70 hover:opacity-100 text-sm right-5"}>
@@ -203,9 +198,19 @@ function IndexView() {
                         <Dropdown.Divider/>
 
                         {fileHandles.map((fileHandle) => (
-                            <Dropdown.Item onClick={() => {
-                                void reloadHandle(fileHandle)
-                            }}>{fileHandle.name}</Dropdown.Item>
+                            <Dropdown.Item as={'div'} key={fileHandle.key}>
+                                <div className="flex items-stretch h-full w-full gap-1.5">
+                                    <div onClick={() => {
+                                        void reloadHandle(fileHandle)
+                                    }}  className="grow hover:font-medium flex items-center justify-start  ">
+                                        {fileHandle.fileHandle.name}
+                                    </div>
+                                    <Button onClick={()=>{removeHandle(fileHandle)}} size={"xs"} color={"light"}>
+                                        <Icon name={"trash"} size={16}/>
+                                    </Button>
+
+                                </div>
+                            </Dropdown.Item>
                         ))}
                     </Dropdown>
                     or
