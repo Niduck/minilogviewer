@@ -7,10 +7,14 @@ import noop from "../utils/noop";
 import {Levels} from "../interfaces/Levels";
 import {Line} from "../interfaces/Line";
 import ReadmeModal from "./ReadmeModal";
-import {FileHandleDecorator, FileHandleStorage} from "../interfaces/FileHandleStorage";
+import {FileHandleDecorator} from "../interfaces/FileHandleStorage";
 
 function IndexView() {
 
+    const formats:Formats = {
+        "RAW" : null,
+        "MONOLOG" : '^\\[(?<date>[^\\]]+)\\] (?<message>.+)'
+    }
     const levels: Levels = {
         DEBUG: '#696969',
         INFO: '#4169E1',
@@ -24,6 +28,7 @@ function IndexView() {
     const [fileHandle, setFileHandle] = useState<FileHandleDecorator | null>(null)
     const [lines, setLines] = useState<Line[]>([])
     const [filterLevels, setFilterLevels] = useState<string[]>([...Object.keys(levels)])
+    const [filterFormat, setFilterFormat] = useState<string>("RAW")
     const [nbLines, setNbLines] = useState<number>(90)
     const [watch, setWatch] = useState<boolean>(false)
     const [watchInterval, setWatchInterval] = useState<NodeJS.Timeout | null>(null)
@@ -72,7 +77,13 @@ function IndexView() {
         setLoading(true)
         const text = await file.text();
         const lines = text.split('\n');
-        const regexp = new RegExp('^\\[(?<date>[^\\]]+)\\] (?<message>.+)', '')
+        let formatRegexp = null;
+        if(Object.prototype.hasOwnProperty.call(formats, filterFormat)){
+            const format = formats[filterFormat];
+            if(format){
+                formatRegexp = new RegExp(format, '')
+            }
+        }
         let index = 0;
         const fileLength = lines.length - 1
         while (linesFound.length < nbLines && fileLength > index) {
@@ -81,12 +92,12 @@ function IndexView() {
                 index++
                 continue;
             }
-            const parsedLine = regexp.exec(lines[i].toString().trim())
+            const parsedLine = formatRegexp ? formatRegexp.exec(lines[i].toString().trim()) : null
             const line: Line = {
                 level: 'DEBUG',
                 raw: lines[i],
-                date: parsedLine?.groups?.date,
-                message: parsedLine?.groups?.message
+                date: parsedLine ? parsedLine?.groups?.date : undefined,
+                message: parsedLine ? parsedLine?.groups?.message : undefined
             }
             for (const level of Object.keys(levels)) {
                 if (lines[i].includes(level)) {
@@ -168,10 +179,14 @@ function IndexView() {
             filterLevels.push(level)
         }
         setFilterLevels([...filterLevels])
+
+    }
+
+    useEffect(()=>{
         if (fileHandle) {
             void readFile(fileHandle)
         }
-    }
+    },[filterLevels, filterFormat])
 
 
 
@@ -234,61 +249,83 @@ function IndexView() {
             </header>
             <main className={"py-6 flex flex-col"}>
                 {fileHandle && (
-                    <div className="w-3/4 mx-auto shrink-0 font-light text-sm gap-3 pb-6 flex justify-end">
+                    <div className="w-3/4 mx-auto shrink-0 font-light text-sm gap-3 px-3 py-3 flex justify-between">
                         <div className="flex items-center bg-white px-3 border-gray-200 rounded-md border gap-1.5">
                             <Icon name={"textbook"} size={16}></Icon>
                             Current file :
                             <div className="font-medium ">
-                                {fileHandle?.name}
+                                {fileHandle.fileHandle?.name}
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <div className="flex items-center font-medium  rounded-md  gap-1.5">
+                                Nb lines :
+                                <Dropdown color={"light"} size={"xs"} label={`${nbLines} lines`} dismissOnClick={false}>
+                                    <Dropdown.Item onClick={() => {
+                                        setNbLines(30)
+                                    }}>30 lines</Dropdown.Item>
+                                    <Dropdown.Item onClick={() => {
+                                        setNbLines(60)
+                                    }}>60 lines</Dropdown.Item>
+                                    <Dropdown.Item onClick={() => {
+                                        setNbLines(90)
+                                    }}>90 lines</Dropdown.Item>
+                                    <Dropdown.Item onClick={() => {
+                                        setNbLines(120)
+                                    }}>120 lines</Dropdown.Item>
+                                    <Dropdown.Item onClick={() => {
+                                        setNbLines(150)
+                                    }}>150 lines</Dropdown.Item>
+                                </Dropdown>
                             </div>
 
+                            <div className="flex items-center font-medium rounded-md  gap-1.5">
+                                Levels :
+                                <Dropdown color={"light"} size={"xs"} label={filterLevels ? filterLevels.join(', ') : 'All'}
+                                          dismissOnClick={false}>
+                                    {Object.entries(levels).map(([key, value]) => (
+                                        <Dropdown.Item onClick={() => {
+                                            toggleFilterLevel(key)
 
+                                        }}>
+                                            <div
+                                                className={`flex gap-3 items-center ${filterLevels.includes(key) ? 'grayscale-0' : 'grayscale opacity-50'}`}>
+                                                <div className="h-2 w-2 rounded-full"
+                                                     style={{background: value}}></div>
+                                                {key}
+                                            </div>
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown>
+                            </div>
+                            <div className="flex items-center font-medium rounded-md  gap-1.5">
+                                Format :
+                                <Dropdown color={"light"} size={"xs"} label={filterFormat}
+                                          dismissOnClick={false}>
+                                    {Object.keys(formats).map((key) => (
+                                        <Dropdown.Item onClick={() => {
+                                            setFilterFormat(key)
+                                        }}>
+                                            <div
+                                                className={`flex gap-3 items-center ${filterFormat === key ? 'grayscale-0' : 'grayscale opacity-50'}`}>
+                                                {key}
+                                            </div>
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown>
+                            </div>
+                            <Button  size={"xs"} onClick={watchHandle}>
+                                {watch ? (<>
+                                        <Icon name={"eyeoff"} size={16}></Icon>&nbsp;
+                                        Unwatch file
+                                    </>) :
+                                    (<>
+                                        <Icon name={"eye"} size={16}></Icon>&nbsp;
+                                        Watch file
+                                    </>)
+                                }
+                            </Button>
                         </div>
-                        <Dropdown size={"xs"} label={`${nbLines} lines`} dismissOnClick={false}>
-                            <Dropdown.Item onClick={() => {
-                                setNbLines(30)
-                            }}>30 lines</Dropdown.Item>
-                            <Dropdown.Item onClick={() => {
-                                setNbLines(60)
-                            }}>60 lines</Dropdown.Item>
-                            <Dropdown.Item onClick={() => {
-                                setNbLines(90)
-                            }}>90 lines</Dropdown.Item>
-                            <Dropdown.Item onClick={() => {
-                                setNbLines(120)
-                            }}>120 lines</Dropdown.Item>
-                            <Dropdown.Item onClick={() => {
-                                setNbLines(150)
-                            }}>150 lines</Dropdown.Item>
-                        </Dropdown>
-                        <Dropdown color={"light"} size={"xs"} label={filterLevels ? filterLevels.join(', ') : 'All'}
-                                  dismissOnClick={false}>
-                            {Object.entries(levels).map(([key, value]) => (
-                                <Dropdown.Item onClick={() => {
-                                    toggleFilterLevel(key)
-                                }}>
-                                    <div
-                                        className={`flex gap-3 items-center ${filterLevels.includes(key) ? 'grayscale-0' : 'grayscale opacity-50'}`}>
-                                        <div className="h-2 w-2 rounded-full"
-                                             style={{background: value}}></div>
-                                        {key}
-                                    </div>
-                                </Dropdown.Item>
-                            ))}
-
-
-                        </Dropdown>
-                        <Button color={'light'} size={"xs"} onClick={watchHandle}>
-                            {watch ? (<>
-                                    <Icon name={"eyeoff"} size={16}></Icon>&nbsp;
-                                    Unwatch file
-                                </>) :
-                                (<>
-                                    <Icon name={"eye"} size={16}></Icon>&nbsp;
-                                    Watch file
-                                </>)
-                            }
-                        </Button>
                     </div>
                 )}
                 <section className={"w-3/4 mx-auto grow p-3 overflow-y-auto"}>
