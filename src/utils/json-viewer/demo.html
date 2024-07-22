@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--    <link rel="icon" href="<%= BASE_URL %>favicon.ico">-->
+    <!--    <title><%= htmlWebpackPlugin.options.title %></title>-->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,700;1,300;1,600&display=swap"
+          rel="stylesheet">
+    <link href="./scss/style.css"
+          rel="stylesheet">
+    <link href="./scss/types.css"
+          rel="stylesheet">
+</head>
+<body>
+<noscript>
+    <!--    <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>-->
+</noscript>
+<div id="json-viewer" style="    width: 100vw;
+    height: 100vh;
+    background: black;
+    padding: 20px;">
+
+</div>
+<!--<script type="module" src="json-viewer.js"></script>-->
+<script type="module">
+    import JsonViewer from "./json-viewer.js";
+    var fixture = {
+            "-preferredFormat": null,
+            "-isHostValid": true,
+            "-isForwardedValid": true,
+            "-isSafeContentPreferred": null,
+            "-trustedHeaderSet": -1,
+            "*trustedProxies": [],
+            "*trustedHostPatterns": [],
+            "*trustedHosts": [],
+            "*httpMethodParameterOverride": true,
+            "*content": null,
+            "*languages": null,
+            "*charsets": null,
+            "*encodings": null,
+            "*acceptableContentTypes": null,
+            "*pathInfo": "/mail/inv",
+            "*requestUri": "/mail/inv",
+            "*baseUrl": "",
+            "*basePath": null,
+            "*method": "GET",
+            "*format": null,
+            "*session": [],
+            "*locale": null,
+            "*defaultLocale": "en",
+            "*formats": null,
+            "*requestFactory": null,
+            "+attributes": {
+                "*parameters": {
+                    "_route": "app_webservice_user_mail",
+                    "_controller": "App\\Controller\\WebService\\UserController::mail",
+                    "_route_params": []
+                }
+            },
+            "+request": { "*parameters": [] },
+            "+query": { "*parameters": [] },
+            "+server": {
+                "*parameters": {
+                    "PHP_EXTRA_CONFIGURE_ARGS": "--enable-fpm --with-fpm-user=www-data --with-fpm-group=www-data --disable-cgi",
+                    "HOSTNAME": "nicolas-pc",
+                    "PHP_INI_DIR": "/usr/local/etc/php",
+                    "LIBEVENT_VERSION": "2.0.22",
+                    "HOME": "/home/phpuser",
+                    "PHPUSER_UID": "1000",
+                    "MYSQL_ROOT_PASSWORD": "root",
+                    "PHP_LDFLAGS": "-Wl,-O1 -pie",
+                    "PHP_CFLAGS": "-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+                    "PHP_VERSION": "7.3.27",
+                    "DOCKER_CONTAINERS_PREFIX": "educhat",
+                    "SYMFONY_APP_HOST": "educhat.docker",
+                    "GPG_KEYS": "CBAF69F173A0FEA4B537F470D66C9593118BCCB6 F38252826ACD957EF380D39F2F7956BC5DA04B5D",
+                    "PHP_CPPFLAGS": "-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+                    "PHP_ASC_URL": "https://www.php.net/distributions/php-7.3.27.tar.xz.asc",
+                    "MYSQL_ALLOW_EMPTY_PASSWORD": "no",
+                    "PHP_URL": "https://www.php.net/distributions/php-7.3.27.tar.xz",
+                    "MYSQL_PASSWORD": "pass_dev",
+                    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "SYMFONY_PUBLIC_DIR": "public",
+                    "MYSQL_USER": "user_dev",
+                    "PHPUSER_NAME": "phpuser",
+                    "PHPIZE_DEPS": "autoconf \t\tdpkg-dev \t\tfile \t\tg++ \t\tgcc \t\tlibc-dev \t\tmake \t\tpkg-config \t\tre2c",
+                    "PWD": "/var/www/symfony",
+                    "PHP_SHA256": "65f616e2d5b6faacedf62830fa047951b0136d5da34ae59e6744cbaf5dca148d",
+                    "SYMFONY_APP_PATH": "/var/www/educhat/educhat",
+                    "MYSQL_DATABASE": "database_dev",
+                    "SYMFONY_ENV": "dev",
+                    "USER": "phpuser",
+                    "HTTP_COOKIE": "Phpstorm-265e0a22=cbcb2ce3-1e9f-4761-bee0-78581be72f80",
+                    "HTTP_ACCEPT_LANGUAGE": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7,la;q=0.6",
+                    "HTTP_ACCEPT_ENCODING": "gzip, deflate, br",
+                    "HTTP_SEC_FETCH_DEST": "document",
+                    "HTTP_SEC_FETCH_USER": "?1",
+                    "HTTP_SEC_FETCH_MODE": "navigate",
+                    "HTTP_SEC_FETCH_SITE": "none",
+                    "HTTP_ACCEPT": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+                    "HTTP_USER_AGENT": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36",
+                    "HTTP_UPGRADE_INSECURE_REQUESTS": "1",
+                    "HTTP_SEC_CH_UA_MOBILE": "?0",
+                    "HTTP_SEC_CH_UA": "\"Google Chrome\";v=\"89\", \"Chromium\";v=\"89\", \";Not A Brand\";v=\"99\"",
+                    "HTTP_CACHE_CONTROL": "no-cache",
+                    "HTTP_PRAGMA": "no-cache",
+                    "HTTP_CONNECTION": "keep-alive",
+                    "HTTP_HOST": "localhost",
+                    "SCRIPT_FILENAME": "/var/www/symfony/public/index.php",
+                    "REDIRECT_STATUS": "200",
+                    "SERVER_NAME": "educhat.docker",
+                    "SERVER_PORT": "80",
+                    "SERVER_ADDR": "127.0.0.1",
+                    "REMOTE_PORT": "53068",
+                    "REMOTE_ADDR": "127.0.0.1",
+                    "SERVER_SOFTWARE": "nginx/1.18.0",
+                    "GATEWAY_INTERFACE": "CGI/1.1",
+                    "REQUEST_SCHEME": "http",
+                    "SERVER_PROTOCOL": "HTTP/1.1",
+                    "DOCUMENT_ROOT": "/var/www/symfony/public",
+                    "DOCUMENT_URI": "/index.php",
+                    "REQUEST_URI": "/mail/inv",
+                    "SCRIPT_NAME": "/index.php",
+                    "CONTENT_LENGTH": "",
+                    "CONTENT_TYPE": "",
+                    "REQUEST_METHOD": "GET",
+                    "QUERY_STRING": "",
+                    "FCGI_ROLE": "RESPONDER",
+                    "PHP_SELF": "/index.php",
+                    "REQUEST_TIME_FLOAT": 1621107292.877387,
+                    "REQUEST_TIME": 1621107292,
+                    "argv": [],
+                    "argc": 0,
+                    "APP_ENV": "dev",
+                    "APP_SECRET": "93c46e4d43c8968149330c5bcbb5769d",
+                    "CORS_ALLOW_ORIGIN": "^https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?$",
+                    "DATABASE_URL": "mysql://user_dev:pass_dev@127.0.0.1:3306/database_dev",
+                    "JWT_SECRET_KEY": "%kernel.project_dir%/config/jwt/private.pem",
+                    "JWT_PUBLIC_KEY": "%kernel.project_dir%/config/jwt/public.pem",
+                    "JWT_PASSPHRASE": "educhat$!",
+                    "MAILER_URL": "smtp://mail.gandi.net:465?encryption=ssl&auth_mod=login&username=contact@educhat.fr&password=EDU/CONTACT/d0mic$!",
+                    "MAILER_DELIVERY_ADDRESS": "nicolas.duvollet@domicours.fr",
+                    "MAILER_FROM": "contact@educhat.fr",
+                    "MAILER_TO": "contact@educhat.fr",
+                    "APP_NAME": "Felidae",
+                    "APP_ID": "felidae",
+                    "APP_URL": "http://localhost:8080",
+                    "REDIS_URL": "redis://localhost",
+                    "PAYPLUG_API_VERSION": "2019-08-06",
+                    "PAYPLUG_SECRET_KEY": "sk_test_1quR9oI6A2itu3N363K16y",
+                    "PAYPLUG_PUBLISHABLE_KEY": "pk_test_5YThbTbbj6oy9hEcLjLoI5",
+                    "PAYPLUG_NOTIFICATION_URL": "",
+                    "SYMFONY_DOTENV_VARS": "APP_ENV,APP_SECRET,CORS_ALLOW_ORIGIN,DATABASE_URL,JWT_SECRET_KEY,JWT_PUBLIC_KEY,JWT_PASSPHRASE,MAILER_URL,MAILER_DELIVERY_ADDRESS,MAILER_FROM,MAILER_TO,APP_NAME,APP_ID,APP_URL,REDIS_URL,PAYPLUG_API_VERSION,PAYPLUG_SECRET_KEY,PAYPLUG_PUBLISHABLE_KEY,PAYPLUG_NOTIFICATION_URL,APP_DEBUG,DEBURGER_URL,DEBURGER_PROJECT_NAME,DEBURGER_PROJECT_TAB_NAME",
+                    "APP_DEBUG": "1",
+                    "DEBURGER_URL": "localhost:8090",
+                    "DEBURGER_PROJECT_NAME": "a",
+                    "DEBURGER_PROJECT_TAB_NAME": "Educhat-api"
+                }
+            },
+            "+files": { "*parameters": [] },
+            "+cookies": { "*parameters": { "Phpstorm-265e0a22": "cbcb2ce3-1e9f-4761-bee0-78581be72f80" } },
+            "+headers": {
+                "*headers": {
+                    "cookie": ["Phpstorm-265e0a22=cbcb2ce3-1e9f-4761-bee0-78581be72f80"],
+                    "accept-language": ["fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7,la;q=0.6"],
+                    "accept-encoding": ["gzip, deflate, br"],
+                    "sec-fetch-dest": ["document"],
+                    "sec-fetch-user": ["?1"],
+                    "sec-fetch-mode": ["navigate"],
+                    "sec-fetch-site": ["none"],
+                    "accept": ["text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"],
+                    "user-agent": ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36"],
+                    "upgrade-insecure-requests": ["1"],
+                    "sec-ch-ua-mobile": ["?0"],
+                    "sec-ch-ua": ["\"Google Chrome\";v=\"89\", \"Chromium\";v=\"89\", \";Not A Brand\";v=\"99\""],
+                    "cache-control": ["no-cache"],
+                    "pragma": ["no-cache"],
+                    "connection": ["keep-alive"],
+                    "host": ["localhost"],
+                    "content-length": [""],
+                    "content-type": [""],
+                    "x-php-ob-level": ["0"]
+                }, "*cacheControl": { "no-cache": true }
+            },
+            "::trustedProxies": [],
+            "::trustedHostPatterns": [],
+            "::trustedHosts": [],
+            "::httpMethodParameterOverride": true,
+            "::formats": null,
+            "::requestFactory": null,
+            "::trustedHeaderSet": -1
+        };
+    let viewer = document.getElementById('json-viewer');
+    new JsonViewer(fixture, viewer)
+</script>
+<!-- built files will be auto injected -->
+</body>
+</html>

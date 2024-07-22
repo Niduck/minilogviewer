@@ -8,6 +8,7 @@ import {Levels} from "../interfaces/Levels";
 import {Line} from "../interfaces/Line";
 import ReadmeModal from "./ReadmeModal";
 import {FileHandleDecorator} from "../interfaces/FileHandleStorage";
+import JsonViewerComponent from "../components/JsonViewer";
 
 function debounce(func: (...args: never[]) => void, delay: number) {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -23,7 +24,7 @@ function IndexView() {
     //? Static
     const formats: Formats = {
         "RAW": null,
-        "MONOLOG": '^\\[(?<date>[^\\]]+)\\] (?<message>.+)'
+        "MONOLOG": '^\\[(?<date>[^\\]]+)\\] (?<message>.+) \\[(?<extra>.*)\\]'
     }
     const levels: Levels = {
         DEBUG: '#696969',
@@ -56,24 +57,25 @@ function IndexView() {
     }, [])
     // const [watchLastModified, setWatchLastModified] = useState<number|null>(null)
     let watchLastModified: null | number = null;
-    const formattedLines = useMemo(()=>{
-            let formatRegexp: null|RegExp = null;
-            if (Object.prototype.hasOwnProperty.call(formats, filterFormat)) {
-                const format = formats[filterFormat];
-                if (format) {
-                    formatRegexp = new RegExp(format, '')
-                }
+    const formattedLines = useMemo(() => {
+        let formatRegexp: null | RegExp = null;
+        if (Object.prototype.hasOwnProperty.call(formats, filterFormat)) {
+            const format = formats[filterFormat];
+            if (format) {
+                formatRegexp = new RegExp(format, '')
             }
-            return lines.map(line => {
-                //Usefull to return to a RAW state
-                line.date = line.message = undefined
-                const parsedLine = formatRegexp ? formatRegexp.exec(line.raw) : null
-                if(formatRegexp){
-                    line.date = parsedLine?.groups?.date
-                    line.message = parsedLine?.groups?.message
-                }
-                return line;
-            })
+        }
+        return lines.map(line => {
+            //Usefull to return to a RAW state
+            line.date = line.message = undefined
+            const parsedLine = formatRegexp ? formatRegexp.exec(line.raw) : null
+            if (formatRegexp) {
+                line.date = parsedLine?.groups?.date
+                line.message = parsedLine?.groups?.message
+                line.extra = parsedLine?.groups?.extra
+            }
+            return line;
+        })
 
     }, [filterFormat, lines])
 
@@ -112,6 +114,7 @@ function IndexView() {
         }
     }, [filterLevels, filterTerms])
 
+
     //? Hooks : Callbacks
     const onDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
@@ -145,6 +148,7 @@ function IndexView() {
         fileHandles.push(fileHandleDecorator)
         void readFile(fileHandleDecorator)
     }
+
     async function removeHandle(_fileHandle: FileHandleDecorator) {
         const fileHandleIDB = await FileHandleIDB;
         fileHandleIDB.delete(_fileHandle.key);
@@ -155,6 +159,7 @@ function IndexView() {
             setLines([])
         }
     }
+
     async function readFile(_fileHandle: FileHandleDecorator) {
         console.log(_fileHandle)
         const file = await _fileHandle.fileHandle.getFile();
@@ -221,6 +226,7 @@ function IndexView() {
         setLines(linesFound)
         setLoading(false)
     }
+
     async function reloadHandle(_fileHandle: FileHandleDecorator) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-ignore
@@ -234,9 +240,11 @@ function IndexView() {
             console.log("No reload.")
         }
     }
+
     async function watchHandle() {
         setWatch(prevState => !prevState)
     }
+
     function toggleFilterLevel(level: string) {
         if (filterLevels.includes(level)) {
             filterLevels.splice(filterLevels.indexOf(level), 1)
@@ -247,6 +255,25 @@ function IndexView() {
 
     }
 
+    const highlightText = (text: string) => {
+        if (filterTerms.length > 0) {
+            const _filterTerms = filterTerms.split(',');
+            for (let term of _filterTerms) {
+                const excluding = term.startsWith('!')
+                if (excluding) {
+                    term = term.substring(1)
+                }
+                if (term !== '') {
+                    const regex = new RegExp(`(${term})`, 'g');
+                    return text.split(regex).map((part, index) =>
+                        regex.test(part) ? <span key={index} className="highlight">{part}</span> : part
+                    );
+                }
+            }
+        }
+        return text;
+
+    };
     //? Template
     return (
         <>
@@ -324,7 +351,7 @@ function IndexView() {
                                 </div>
                                 <div className="grow">
                                     <TextInput sizing={"sm"} placeholder="Filter terms : include,!exclude"
-                                               onChange={(e:React.ChangeEvent<HTMLInputElement>) => {
+                                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                                    const value = e.target.value;
                                                    delayedSetFilterTerms(value as never)
                                                }}/>
@@ -419,10 +446,15 @@ function IndexView() {
                                                 {line.date ? dayjs(line.date).format('MMMM DD YYYY HH:mm') : '-'}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col break-all" style={{color: levels[line.level]}}>
-                                            {line.message ? line.message : line.raw}
+                                        <div className="break-all" style={{color: levels[line.level]}}>
+                                            {highlightText(line.message ? line.message : line.raw)}
                                         </div>
                                     </div>
+                                    {line.extra && (
+                                        <div>
+                                            <JsonViewerComponent data={line.extra}></JsonViewerComponent>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

@@ -1,0 +1,22 @@
+$types: (
+        'object': #1E90FF,
+        'array': #1E90FF,
+        'null' : #FFF,
+        'string' : #32CD32,
+        'symbol' : #32CD32,
+        'number': #FF4500,
+        'bigint': #FF4500,
+        'boolean': #e1177d,
+        'undefined': #FFF,
+        'function': #FF4500
+);
+:root{
+  @each $name, $color in $types {
+    --lsn-type-#{$name}: #{$color};
+  }
+}
+@each $name, $color in $types {
+  .lsn-type--#{$name}{
+    color: var(--lsn-type-#{$name});
+  }
+}

@@ -5,4 +5,5 @@ export interface Line{
     raw: string,
     date?: string,
     message?: string
+    extra?: string
 }
