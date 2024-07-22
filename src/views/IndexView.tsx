@@ -24,7 +24,7 @@ function IndexView() {
     //? Static
     const formats: Formats = {
         "RAW": null,
-        "MONOLOG": '^\\[(?<date>[^\\]]+)\\]\\s(?<message>.+)\\s(\\[|\\{)(?<extra>.*)(\\]|\\})\\s(?<request>.*)'
+        "MONOLOG": '^\\[(?<date>[^\\]]+)\\]\\s(?<message>.+)\\s(?<extra>(\\[|\\{).*(\\]|\\}))\\s(?<request>.*)'
     }
     const levels: Levels = {
         DEBUG: '#696969',
