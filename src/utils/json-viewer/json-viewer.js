@@ -20,12 +20,12 @@ function getTypeOf (arg) {
     }
     switch(res.type){
         case 'object': {
-            if(Object.prototype.hasOwnProperty.call(arg, '_deburger')){
-                res.ptype = arg['_deburger']._type;
-                res.preview = arg['_deburger']._preview;
+            if(Object.prototype.hasOwnProperty.call(arg, '_log')){
+                res.ptype = arg['_log']._type;
+                res.preview = arg['_log']._preview;
                 res.expandable = true;
                 res.prefixed = true;
-                delete arg['_deburger'];
+                delete arg['_log'];
             }
             else{
                 let matches = Object.prototype.toString.call(arg).match(/\[object\s(?<ptype>.*)\]/);
